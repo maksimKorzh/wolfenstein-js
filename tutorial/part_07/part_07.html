@@ -1,0 +1,282 @@
+<style>html, body, canvas { margin: 0px; padding: 0px; }</style>
+<canvas id="screen" style="width: 100%; height: 100%"/>
+<script>
+  /*************************************\
+   =====================================
+         ---------------------------
+                Wolfenstein JS
+         ---------------------------
+           Didactic implementation
+              
+                     by
+
+              Code Monkey King
+         ---------------------------
+   =====================================
+  \*************************************/
+
+  // init canvas
+  const canvas = document.getElementById('screen');
+  const context = canvas.getContext('2d');
+  
+  // screen
+  const WIDTH = 300, HALF_WIDTH = 150;
+  const HEIGHT = 200, HALF_HEIGHT = 100;
+
+  // FPS
+  const FPS = 60;
+  const cycleDelay = Math.floor(1000 / FPS);
+  var oldCycleTime = 0;
+  var cycleCount = 0;
+  var fps_rate = '...';
+  
+  // map
+  const MAP_SIZE = 32;
+  const MAP_SCALE = 64;
+  const MAP_RANGE = MAP_SCALE * MAP_SIZE;
+  const MAP_SPEED = (MAP_SCALE / 2) / 10;
+  var map = [
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 0, 0, 0, 0, 2,
+    1, 0, 0, 0, 0, 0, 0, 0,14, 0, 0, 0, 0, 0, 2,14, 2, 0, 0, 0, 0, 0, 0, 0, 2,14, 2, 0, 0, 0, 0, 2,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+    1, 0, 0, 0, 0, 0, 0, 0,14, 0, 0, 0, 0, 0, 2,14, 2, 0, 0, 0, 0, 0, 0, 0, 2,14, 2, 0, 0, 0, 0, 2,
+    1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 0, 0, 0, 0, 2,
+    1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 2, 2,
+    1, 1, 1, 1,15, 0,15, 1, 1, 1, 1,15, 0,15, 1, 1, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 2,15, 0,15, 2,
+    1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 2, 2, 2, 2, 2, 0, 2, 2, 2, 2, 0, 2, 2, 0, 2, 2,
+    1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 2, 0, 2, 2,
+    1, 0, 0, 0, 0, 0, 0, 0,14, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 0, 2, 0, 0, 2, 2, 2, 2, 0, 2, 2,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 0, 2, 0, 0, 2, 0, 0, 0, 0, 2, 2,
+    1, 0, 0, 0, 0, 0, 0, 0,14, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 0, 2, 0, 0, 2, 0, 0, 0, 0, 2, 2,
+    1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 0, 2, 0, 0, 2, 0, 2, 2, 2, 2, 2,
+    1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+    1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,15, 0,15, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    1, 0, 0, 0, 1, 0, 0, 0, 1,11,11,14, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 0, 0, 0, 1, 0, 0, 0, 1,12, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 1, 0, 0, 0, 1,11,11,14, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0,14, 0, 0, 0, 0, 0, 0, 0, 1,
+    1,15, 0,15, 1,15, 0,15, 1, 1, 1,15, 0,15, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0,14, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1,15, 0,15, 1, 1, 1,
+    6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0,14, 0, 0, 0, 0, 0, 0, 0, 1,
+    9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,14, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0,14, 0, 0, 0, 0, 0, 0, 0, 1,
+    6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,14, 3, 3, 0, 3, 0, 0, 1, 0, 0, 0, 1,15, 0,15, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 1, 0, 3, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 0, 3, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1,
+    1, 1, 1, 1, 7, 1, 6, 1, 9, 1, 6, 1, 7, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1,
+  ];
+  var showMap = false;
+  
+  // player
+  var playerX = MAP_SCALE + 20;
+  var playerY = MAP_SCALE + 20;
+  var playerAngle = Math.PI / 3;
+  var playerMoveX = 0;
+  var playerMoveY = 0;
+  var playerMoveAngle = 0;
+  
+  // handle user input
+  document.onkeydown = function(event) {
+    switch (event.keyCode) {
+      case 38: playerMoveX = 1; playerMoveY = 1; break;         /* arrow up               */
+      case 40: playerMoveX = -1; playerMoveY = -1; break;       /* arrow down             */
+      case 37: playerMoveAngle = 1; break;                      /* arrow left             */
+      case 39: playerMoveAngle = -1; break;                     /* arrow right            */
+      case 16: showMap = true; break;                           /* left shift (show map)  */
+    }
+  }
+  
+  document.onkeyup = function(event) {
+    switch (event.keyCode) {
+      case 38:
+      case 40: playerMoveX = 0; playerMoveY = 0; break;
+      case 37:
+      case 39: playerMoveAngle = 0; break;
+      case 16: showMap = false; break;
+    }
+  } 
+  
+  // camera
+  const DOUBLE_PI = 2 * Math.PI;
+  const FOV = Math.PI / 3;
+  const HALF_FOV = FOV / 2;
+  const STEP_ANGLE = FOV / WIDTH;
+  
+  // graphics
+  const WALLS = [];
+  
+  // load wall textures
+  for (var filename = 0; filename < 14; filename++) {
+    var image = document.createElement('img');
+    image.src = 'assets/walls/' + filename + '.png';
+    WALLS.push(image);
+  }
+
+  // game loop
+  function gameLoop() {
+    // calculate FPS
+    cycleCount++;
+    if (cycleCount >= 60) cycleCount = 0;
+    var startTime = Date.now();
+    var cycleTime = startTime - oldCycleTime;
+    oldCycleTime = startTime;
+    if (cycleCount % 60 == 0) fps_rate = Math.floor(1000 / cycleTime);
+    
+    // resize canvas
+    canvas.width = window.innerWidth * 0.3;
+    canvas.height = window.innerHeight * 0.3;
+    
+    // update player position
+    var playerOffsetX = Math.sin(playerAngle) * MAP_SPEED;
+    var playerOffsetY = Math.cos(playerAngle) * MAP_SPEED;
+    var mapTargetX = Math.floor(playerY / MAP_SCALE) * MAP_SIZE + Math.floor((playerX + playerOffsetX * playerMoveX * 10) / MAP_SCALE);
+    var mapTargetY = Math.floor((playerY + playerOffsetY * playerMoveY * 10) / MAP_SCALE) * MAP_SIZE + Math.floor(playerX / MAP_SCALE);
+    
+    if (playerMoveX && map[mapTargetX] == 0) playerX += playerOffsetX * playerMoveX;
+    if (playerMoveY && map[mapTargetY] == 0) playerY += playerOffsetY * playerMoveY;
+    if (playerMoveAngle) playerAngle += 0.03 * playerMoveAngle;
+    
+    // calculate map & player offsets
+    var mapOffsetX = Math.floor(canvas.width / 2) - HALF_WIDTH;
+    var mapOffsetY = Math.floor(canvas.height / 2) - HALF_HEIGHT;
+    var playerMapX = (playerX / MAP_SCALE) * 5 + mapOffsetX;
+    var playerMapY = (playerY / MAP_SCALE) * 5 + mapOffsetY;
+
+    // draw floor and ceiling
+    context.drawImage(WALLS[0], canvas.width / 2 - HALF_WIDTH, canvas.height / 2 - HALF_HEIGHT);
+    
+    // raycasting
+    var currentAngle = playerAngle + HALF_FOV;
+    var rayStartX = Math.floor(playerX / MAP_SCALE) * MAP_SCALE;
+    var rayStartY = Math.floor(playerY / MAP_SCALE) * MAP_SCALE;
+    
+    // loop over casted rays
+    for (var ray = 0; ray < WIDTH; ray++) {
+      // get current angle sin & cos
+      var currentSin = Math.sin(currentAngle); currentSin = currentSin ? currentSin : 0.000001;
+      var currentCos = Math.cos(currentAngle); currentCos = currentCos ? currentCos : 0.000001;
+    
+      // vertical line intersection
+      var rayEndX, rayEndY, rayDirectionX, verticalDepth, textureEndY, textureY;
+      if (currentSin > 0) { rayEndX = rayStartX + MAP_SCALE; rayDirectionX = 1 }
+      else { rayEndX = rayStartX; rayDirectionX = -1 }
+      for (var offset = 0; offset < MAP_RANGE; offset += MAP_SCALE) {
+        verticalDepth = (rayEndX - playerX) / currentSin;
+        rayEndY = playerY + verticalDepth * currentCos;
+        var mapTargetX = Math.floor(rayEndX / MAP_SCALE);
+        var mapTargetY = Math.floor(rayEndY / MAP_SCALE);
+        if (currentSin <= 0) mapTargetX += rayDirectionX;
+        var targetSquare = mapTargetY * MAP_SIZE + mapTargetX;
+        if (targetSquare < 0 || targetSquare > map.length - 1) break;
+        if (map[targetSquare] != 0) {
+          textureY = map[targetSquare];
+          if (map[targetSquare] == 14) textureY = 1;
+          if (map[targetSquare] == 15) textureY = 5;
+          break;
+        }
+        rayEndX += rayDirectionX * MAP_SCALE;
+      } textureEndY = rayEndY;
+      
+      // vertical line intersection
+      var rayEndY, rayEndX, rayDirectionY, horizontalDepth, textureEndX, textureX;
+      if (currentCos > 0) { rayEndY = rayStartY + MAP_SCALE; rayDirectionY = 1 }
+      else { rayEndY = rayStartY; rayDirectionY = -1 }
+      for (var offset = 0; offset < MAP_RANGE; offset += MAP_SCALE) {
+        horizontalDepth = (rayEndY - playerY) / currentCos;
+        rayEndX = playerX + horizontalDepth * currentSin;
+        var mapTargetX = Math.floor(rayEndX / MAP_SCALE);
+        var mapTargetY = Math.floor(rayEndY / MAP_SCALE);
+        if (currentCos <= 0) mapTargetY += rayDirectionY;
+        var targetSquare = mapTargetY * MAP_SIZE + mapTargetX;
+        if (targetSquare < 0 || targetSquare > map.length - 1) break;
+        if (map[targetSquare] != 0) {
+          textureX = map[targetSquare];
+          if (map[targetSquare] == 14) textureX = 5;
+          if (map[targetSquare] == 15) textureX = 1;
+          break;
+        }
+        rayEndY += rayDirectionY * MAP_SCALE;
+      } textureEndX = rayEndX;
+      
+      // calculate 3D projection
+      var depth = verticalDepth < horizontalDepth ? verticalDepth : horizontalDepth;
+      var textureImage = verticalDepth < horizontalDepth ? textureY : textureX;
+      var textureOffset = verticalDepth < horizontalDepth ? textureEndY : textureEndX;
+      textureOffset = Math.floor(textureOffset - Math.floor(textureOffset / MAP_SCALE) * MAP_SCALE);
+      depth *= Math.cos(playerAngle - currentAngle);
+      var wallHeight = Math.min(Math.floor(MAP_SCALE * 280 / (depth + 0.0001)), 50000);
+      
+      // render textures
+      context.drawImage(
+        WALLS[textureImage],
+        textureOffset,                                                       /* source image X offset */
+        0,                                                                   /* source image Y offset */
+        1,                                                                   /* source image width    */
+        64,                                                                  /* source image height   */
+        mapOffsetX + ray,                                                    /* target image X offset */
+        mapOffsetY + (HALF_HEIGHT - Math.floor(wallHeight / 2)),             /* target image Y offset */
+        1,                                                                   /* target image width    */
+        wallHeight,                                                          /* target image height   */
+      );
+    
+      // update current angle
+      currentAngle -= STEP_ANGLE;
+    }
+    
+    // draw map on left shift press
+    if (showMap) { 
+      // draw 2D map
+      for (var row = 0; row < MAP_SIZE; row++) {
+        for (var col = 0; col < MAP_SIZE; col++) {
+          var square = row * MAP_SIZE + col;
+          if (map[square] != 0) {
+            var materialTexture  = map[square] > 13 ? 1 : map[square];
+            context.drawImage(WALLS[materialTexture], 0, 0, 64, 64, mapOffsetX + col * 5, mapOffsetY + row * 5, 5, 5);
+          } else {
+            context.fillStyle = '#aaa';
+            context.fillRect(mapOffsetX + col * 5, mapOffsetY + row * 5, 5, 5);
+          }
+        }
+      }
+      
+      // draw player on 2D map
+      context.fillStyle = 'Red';
+      context.beginPath();
+      context.arc(playerMapX, playerMapY, 2, 0, DOUBLE_PI);
+      context.fill();
+      context.strokeStyle = 'Red';
+      context.lineWidht = 1;
+      context.beginPath();
+      context.moveTo(playerMapX, playerMapY);
+      context.lineTo(playerMapX + Math.sin(playerAngle) * 5, playerMapY + Math.cos(playerAngle) * 5);
+      context.stroke();
+    }
+    
+    // fix wall layout
+    context.fillStyle = 'White';
+    context.fillRect(0, 0, canvas.width, mapOffsetY);
+    context.fillRect(0, mapOffsetY + 200, canvas.width, canvas.width - mapOffsetY + 200);
+
+    // infinite loop
+    setTimeout(gameLoop, cycleDelay);
+    
+    // render FPS to screen
+    context.fillStyle = 'Black';
+    context.font = '10px Monospace';
+    context.fillText('FPS: ' + fps_rate, 0, 20);
+    
+  } window.onload = function() { gameLoop(); }
+  
+</script>
+
+
+
+
+
+
+
+
